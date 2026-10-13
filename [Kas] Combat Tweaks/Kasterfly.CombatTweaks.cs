@@ -32,7 +32,7 @@ namespace Kasterfly.CombatTweaks
 
             InitSettings();
             YayoCombat3Compat.DoYayoUnpatch();
-            Log.Message("[CombatTweaks] CombatTweaks (v1.2.3) for RimWorld 1.6");
+            Log.Message($"[CombatTweaks] CombatTweaks (v1.3.0) for RimWorld {VersionSpecific.GameVersion}");
         }
 
         public override string SettingsCategory() => "Combat Tweaks";
