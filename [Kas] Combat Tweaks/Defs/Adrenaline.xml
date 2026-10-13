@@ -1,0 +1,60 @@
+﻿<Defs>
+    <HediffDef>
+        <defName>Adrenaline</defName>
+        <label>adrenaline rush</label>
+        <description>A surge of adrenaline heightens reaction time and dulls pain, but reduces precision and mental clarity.</description>
+        <hediffClass>Kasterfly.CombatTweaks.Hediff.Adrenaline</hediffClass>
+        <scenarioCanAdd>true</scenarioCanAdd>
+        <stages>
+            <li>
+                <label>adrenalized</label>
+                <statFactors>
+                    <MoveSpeed>1.35</MoveSpeed>
+                    <AimingDelayFactor>0.5</AimingDelayFactor>
+                    <ShootingAccuracyPawn>0.75</ShootingAccuracyPawn>
+                    <PainShockThreshold>1.3</PainShockThreshold>
+                </statFactors>
+                <capMods>
+                    <li>
+                        <capacity>Consciousness</capacity>
+                        <offset>-0.1</offset>
+                    </li>
+                </capMods>
+            </li>
+        </stages>
+        <comps>
+            <li Class="HediffCompProperties_Disappears">
+                <disappearsAfterTicks>1800</disappearsAfterTicks>
+                <showRemainingTime>true</showRemainingTime>
+            </li>
+        </comps>
+    </HediffDef>
+    <HediffDef>
+        <defName>AdrenalineCrash</defName>
+        <label>adrenaline crash</label>
+        <description>After the high of adrenaline fades, the body crashes—slowing down and struggling to stay alert.</description>
+        <hediffClass>HediffWithComps</hediffClass>
+        <scenarioCanAdd>true</scenarioCanAdd>
+        <stages>
+            <li>
+                <label>crashing</label>
+                <statFactors>
+                    <MoveSpeed>0.5</MoveSpeed>
+                    <PainShockThreshold>0.5</PainShockThreshold>
+                </statFactors>
+                <capMods>
+                    <li>
+                        <capacity>Consciousness</capacity>
+                        <offset>-0.45</offset>
+                    </li>
+                </capMods>
+            </li>
+        </stages>
+        <comps>
+            <li Class="HediffCompProperties_Disappears">
+                <disappearsAfterTicks>1800</disappearsAfterTicks>
+                <showRemainingTime>true</showRemainingTime>
+            </li>
+        </comps>
+    </HediffDef>
+</Defs>

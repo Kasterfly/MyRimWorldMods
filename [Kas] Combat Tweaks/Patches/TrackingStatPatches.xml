@@ -1,0 +1,65 @@
+﻿<Patch>
+    <!-- Add CombatTweaksStat into existing statBases blocks (no duplicates) -->
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[weaponTags]/statBases</xpath>
+        <value>
+            <CombatTweaksStat>0</CombatTweaksStat>
+        </value>
+    </Operation>
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[apparel]/statBases</xpath>
+        <value>
+            <CombatTweaksStat>0</CombatTweaksStat>
+        </value>
+    </Operation>
+
+    <!-- If a def lacks statBases entirely, create it with our stat -->
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[weaponTags and not(statBases)]</xpath>
+        <value>
+            <statBases>
+                <CombatTweaksStat>0</CombatTweaksStat>
+            </statBases>
+        </value>
+    </Operation>
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[apparel and not(statBases)]</xpath>
+        <value>
+            <statBases>
+                <CombatTweaksStat>0</CombatTweaksStat>
+            </statBases>
+        </value>
+    </Operation>
+
+    <!-- Add the comp to track stats on both weapons and apparel -->
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[weaponTags]/comps</xpath>
+        <value>
+            <li Class="Kasterfly.CombatTweaks.Comps.CompProperties_CombatTracking" />
+        </value>
+    </Operation>
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[apparel]/comps</xpath>
+        <value>
+            <li Class="Kasterfly.CombatTweaks.Comps.CompProperties_CombatTracking" />
+        </value>
+    </Operation>
+
+    <!-- Create comps list if missing -->
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[weaponTags and not(comps)]</xpath>
+        <value>
+            <comps>
+                <li Class="Kasterfly.CombatTweaks.Comps.CompProperties_CombatTracking" />
+            </comps>
+        </value>
+    </Operation>
+    <Operation Class="PatchOperationAdd">
+        <xpath>Defs/ThingDef[apparel and not(comps)]</xpath>
+        <value>
+            <comps>
+                <li Class="Kasterfly.CombatTweaks.Comps.CompProperties_CombatTracking" />
+            </comps>
+        </value>
+    </Operation>
+</Patch>
