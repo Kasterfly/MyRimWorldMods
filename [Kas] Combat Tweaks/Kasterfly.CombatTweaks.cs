@@ -32,7 +32,7 @@ namespace Kasterfly.CombatTweaks
 
             InitSettings();
             YayoCombat3Compat.DoYayoUnpatch();
-            Log.Message($"[CombatTweaks] CombatTweaks (v1.3.0) for RimWorld {VersionSpecific.GameVersion}");
+            Log.Message($"[CombatTweaks] CombatTweaks (v1.4.0) for RimWorld {VersionSpecific.GameVersion}");
         }
 
         public override string SettingsCategory() => "Combat Tweaks";
@@ -105,6 +105,46 @@ namespace Kasterfly.CombatTweaks
                     "Enable Vanilla Combat Reloaded's \"Advanced Armor Behavior\" Compatibility"
                 )
             );
+
+            Action<Rect> VcoCheckbox(Func<bool> getter, Action<bool> setter, string label) =>
+                _settingsGui.CreateCheckbox(getter, val =>
+                {
+                    if (getter() != val)
+                    {
+                        setter(val);
+                        VanillaCombatOverhaulCompat.OnSettingsChanged();
+                    }
+                }, label);
+            var vcoMasterKey = new List<string> { "vanillaCombatOverhaulCompatibility" };
+            var vcoOptionKeys = new List<string>
+                { "vcoUseAdvancedArmor", "vcoUseProjectileWounds", "vcoUseMissSpread", "vcoUseFireModeBursts", "vcoScaleFireModeDistances" };
+
+            _settingsGui.AddItem("vanillaCombatOverhaulCompatibility", "vanillaCombatOverhaulCompatibility", "Compatibility",
+                VcoCheckbox(() => Settings.vanillaCombatOverhaulCompatibility, val => Settings.vanillaCombatOverhaulCompatibility = val,
+                    "Enable Vanilla Combat Overhaul Compatibility" + (VanillaCombatOverhaulCompat.present ? "" : " (not loaded)")),
+                35f, vcoOptionKeys);
+            _settingsGui.AddItem("vcoUseAdvancedArmor", "vcoUseAdvancedArmor", "Compatibility",
+                VcoCheckbox(() => Settings.vcoUseAdvancedArmor, val => Settings.vcoUseAdvancedArmor = val,
+                    "Use VCO's \"Advanced Armor\" Scaling"),
+                35f, vcoMasterKey);
+            _settingsGui.AddItem("vcoUseProjectileWounds", "vcoUseProjectileWounds", "Compatibility",
+                VcoCheckbox(() => Settings.vcoUseProjectileWounds, val => Settings.vcoUseProjectileWounds = val,
+                    "Use VCO's Bullet and Arrow Wounds"),
+                35f, vcoMasterKey);
+            _settingsGui.AddItem("vcoUseMissSpread", "vcoUseMissSpread", "Compatibility",
+                VcoCheckbox(() => Settings.vcoUseMissSpread, val => Settings.vcoUseMissSpread = val,
+                    "Use VCO's Missed Shot Spread (instead of Projectile Spread)"),
+                35f, vcoMasterKey);
+            _settingsGui.AddItem("vcoUseFireModeBursts", "vcoUseFireModeBursts", "Compatibility",
+                VcoCheckbox(() => Settings.vcoUseFireModeBursts, val => Settings.vcoUseFireModeBursts = val,
+                    "Use VCO's Fire Mode Burst Sizes (instead of Burst Size)"),
+                35f, vcoMasterKey);
+            _settingsGui.AddItem("vcoScaleFireModeDistances", "vcoScaleFireModeDistances", "Compatibility",
+                VcoCheckbox(() => Settings.vcoScaleFireModeDistances, val => Settings.vcoScaleFireModeDistances = val,
+                    "Scale VCO's Fire Mode Distances with Weapon Range"),
+                35f, vcoMasterKey);
+            foreach (string key in vcoOptionKeys)
+                _settingsGui.AddConditional(key, () => Settings.vanillaCombatOverhaulCompatibility);
 
             _settingsGui.AddItem("respectNonLethalDamage", "respectNonLethalDamage", "Compatibility",
                 _settingsGui.CreateCheckbox(() => Settings.respectNonLethalDamage,
@@ -433,6 +473,18 @@ namespace Kasterfly.CombatTweaks
                 "Multiplier that overrides armor effectiveness when Yayo compatibility is enabled.");
             _settingsGui.AddDescription("vanillaCombatReloadedCompatibility",
                 "Enables compatibility with Vanilla Combat Reloaded's 'Advanced Armor Behavior'. If you change the values for the Advanced Armor Behavior in Vanilla Combat Reloaded, disable this setting, then re-enable it for it to update with the new values.");
+            _settingsGui.AddDescription("vanillaCombatOverhaulCompatibility",
+                "Fixes conflicts with Vanilla Combat Overhaul (VCO) and shows the options below to pick which mod handles the features both mods change. Without it, VCO's Advanced Armor doubles weapon armor penetration and this mod's armor uses that doubled value. Does nothing while VCO isn't loaded.");
+            _settingsGui.AddDescription("vcoUseAdvancedArmor",
+                "On: armor and armor penetration are scaled like VCO's Advanced Armor (by VCO's armor scale) before this mod's armor calculations, and weapons keep VCO's doubled armor penetration. Off: VCO's armor penetration doubling is removed, so weapons show and use their normal values. Does nothing if Advanced Armor is off in VCO.");
+            _settingsGui.AddDescription("vcoUseProjectileWounds",
+                "On: VCO's bullet and arrow wounds are used (damage spread to nearby body parts, rounds passing through). They only apply to hits armor didn't reduce, judged by this mod's armor so damage boosts and nerfs don't count as armor. Off: bullets and arrows wound like vanilla.");
+            _settingsGui.AddDescription("vcoUseMissSpread",
+                "On: VCO decides where missed shots go and Projectile Spread is skipped. Off: Projectile Spread places missed shots instead, without its extra hit roll since VCO already rolled the shot with its own accuracy changes. Only matters if Projectile Spread is above 0%.");
+            _settingsGui.AddDescription("vcoUseFireModeBursts",
+                "On: VCO's fire modes change burst size and this mod's Burst Size is ignored. Off: Burst Size is used, and VCO's fire modes still change accuracy, aim time and cooldown but not burst size. Like Burst Size, reload the save after changing this.");
+            _settingsGui.AddDescription("vcoScaleFireModeDistances",
+                "VCO's automatic fire mode is picked by distance (Short Burst from 12 tiles, Precision from 25 by default). When on, those distances scale with the Weapon Range Modifier, so at 2x range they become 24 and 50 tiles.");
             _settingsGui.AddDescription("respectNonLethalDamage",
                 "Some events deal damage that is meant to down a pawn without killing it (a Metalhorror emerging from its host, downed refugees from quests and transport pods, etc.). When enabled, this mod's damage boosts and multipliers (Damage Boost, Melee/Ranged Damage Boost, Enemy Damage Boost, Friendly Fire) are not applied to that damage, so it stays non-lethal like vanilla intends.");
 
@@ -590,6 +642,12 @@ namespace Kasterfly.CombatTweaks
         public FinalArmorCalculations finalArmorCalculations = FinalArmorCalculations.Custom;
         public bool yayoCombatCompat;
         public bool vanillaCombatReloadedCompatibility;
+        public bool vanillaCombatOverhaulCompatibility;
+        public bool vcoUseAdvancedArmor;
+        public bool vcoUseProjectileWounds = true;
+        public bool vcoUseMissSpread = true;
+        public bool vcoUseFireModeBursts = true;
+        public bool vcoScaleFireModeDistances = true;
         public bool reliableArmors;
         public bool doTracking;
         public bool debugLogging;
@@ -654,6 +712,12 @@ namespace Kasterfly.CombatTweaks
             Scribe_Values.Look(ref sharpToBluntThreshold, "sharpToBluntThreshold", 0.2f);
             Scribe_Values.Look(ref yayoCombatCompat, "yayoCombatCompat");
             Scribe_Values.Look(ref vanillaCombatReloadedCompatibility, "vanillaCombatReloadedCompatibility");
+            Scribe_Values.Look(ref vanillaCombatOverhaulCompatibility, "vanillaCombatOverhaulCompatibility");
+            Scribe_Values.Look(ref vcoUseAdvancedArmor, "vcoUseAdvancedArmor");
+            Scribe_Values.Look(ref vcoUseProjectileWounds, "vcoUseProjectileWounds", true);
+            Scribe_Values.Look(ref vcoUseMissSpread, "vcoUseMissSpread", true);
+            Scribe_Values.Look(ref vcoUseFireModeBursts, "vcoUseFireModeBursts", true);
+            Scribe_Values.Look(ref vcoScaleFireModeDistances, "vcoScaleFireModeDistances", true);
             Scribe_Values.Look(ref reliableArmors, "reliableArmor", true);
             Scribe_Values.Look(ref debugLogging, "debugLogging");
             Scribe_Values.Look(ref doTracking, "doTracking");
@@ -698,7 +762,7 @@ namespace Kasterfly.CombatTweaks
             Scribe_Values.Look(ref reductionChanceMultiplier, "reductionChanceMultiplier", 1f);
             Scribe_Values.Look(ref reductionAmountMultiplier, "reductionAmountMultiplier", 0.5f);
             Scribe_Values.Look(ref armorStrength, "armorStrength", 1f);
-            Scribe_Values.Look(ref bulletSpread, "bulletSpread", 0.1f);
+            Scribe_Values.Look(ref bulletSpread, "bulletSpread", 0f);
             Scribe_Values.Look(ref meleeDamageBoost, "meleeDamageBoost", 1f);
             Scribe_Values.Look(ref rangedDamageBoost, "rangedDamageBoost", 1f);
             Scribe_Values.Look(ref adrenalineChance, "adrenalineChance", 0.1f);
@@ -1302,7 +1366,10 @@ namespace Kasterfly.CombatTweaks.MainFunctions
             }
 
             if (damageDef.armorCategory == null)
+            {
+                RecordArmorResult(pawn, part, false);
                 return damAmount;
+            }
 
             float armorMult = settings.armorStrength;
             float armorAdd = 0f;
@@ -1471,7 +1538,35 @@ namespace Kasterfly.CombatTweaks.MainFunctions
                 return 0f;
             }
 
+            RecordArmorResult(pawn, part, damAmount < originalDamage);
             return damAmount;
+        }
+
+        // Whether armor reduced the last hit, measured after this mod's damage boosts. Vanilla's "diminished" flag compares
+        // against the unboosted amount, so it counts boosts/nerfs as armor. Only read by VanillaCombatOverhaulCompat_Wounds_Patch,
+        // in the same ApplyDamageToPart call, so a result from another hit or tick is ignored.
+        private static Pawn _lastArmorPawn;
+        private static BodyPartRecord _lastArmorPart;
+        private static int _lastArmorTick = -1;
+        private static bool _lastArmorReduced;
+
+        private static void RecordArmorResult(Pawn pawn, BodyPartRecord part, bool reduced)
+        {
+            if (!VanillaCombatOverhaulCompat.Active)
+                return;
+            _lastArmorPawn = pawn;
+            _lastArmorPart = part;
+            _lastArmorTick = Find.TickManager?.TicksGame ?? -1;
+            _lastArmorReduced = reduced;
+        }
+
+        public static bool TryTakeArmorResult(Pawn pawn, BodyPartRecord part, out bool reduced)
+        {
+            reduced = _lastArmorReduced;
+            bool match = _lastArmorPawn == pawn && _lastArmorPart == part && _lastArmorTick == (Find.TickManager?.TicksGame ?? -1);
+            _lastArmorPawn = null;
+            _lastArmorPart = null;
+            return match;
         }
 
 
@@ -1505,6 +1600,22 @@ namespace Kasterfly.CombatTweaks.MainFunctions
                 }
                 armorRating *= VanillaCombatReloadedCompat.AArmorScale;
                 armorPenetration *= VanillaCombatReloadedCompat.AArmorScale;
+            }
+
+            // Same as VCO's prefix on vanilla's ApplyArmor, which never runs since this mod replaces GetPostArmorDamage
+            if (VanillaCombatOverhaulCompat.Active)
+            {
+                if (settings.vcoUseAdvancedArmor && VanillaCombatOverhaulCompat.TryGetArmorScale(out float vcoArmorScale))
+                {
+                    if (settings.debugLogging)
+                        Log.Message($"[CombatTweaks] -- Vanilla Combat Overhaul Advanced Armor (x{vcoArmorScale}): armor rating {armorRating} -> {armorRating * vcoArmorScale} | armor penetration {armorPenetration} -> {armorPenetration * vcoArmorScale}");
+                    armorRating *= vcoArmorScale;
+                    armorPenetration *= vcoArmorScale;
+                }
+                else if (settings.debugLogging)
+                {
+                    Log.Message($"[CombatTweaks] -- Vanilla Combat Overhaul compat: armor rating {armorRating} | armor penetration {armorPenetration} ({VanillaCombatOverhaulCompat.DescribePenetration()})");
+                }
             }
 
             if (settings.ignoreWeakArmor && armorRating < settings.ignoreWeakArmorThreshold && !settings.ignoreWeakArmorStillTakeDurabilityDamage)
@@ -2260,6 +2371,297 @@ namespace Kasterfly.CombatTweaks.HarmonyPatches
         }
     }
 
+    // Vanilla Combat Overhaul (cruesoe.vanillacombatoverhaul). Its settings are read live since they can change mid-game.
+    // Its "Advanced Armor" multiplies armor penetration by penetrationScale where it's calculated (weapons, projectiles, extra
+    // damage, also what the info card shows), then armor and penetration by armorScale in a prefix on vanilla's ApplyArmor.
+    // That prefix never runs since this mod replaces GetPostArmorDamage, so either the penetration scaling is removed again
+    // (VanillaCombatOverhaulCompat_Patches.PenetrationPostfix) or ApplyArmor applies armorScale itself (vcoUseAdvancedArmor).
+    public static class VanillaCombatOverhaulCompat
+    {
+        public static readonly bool present;
+
+        // VCO's own methods are patched at startup (VanillaCombatOverhaulCompatStartup), not in the mod constructor,
+        // so none of VCO's classes get touched before its defs and textures are loaded
+        private static readonly List<MethodBase> penetrationMethods = new List<MethodBase>();
+        private static readonly MethodInfo rawPenetration;
+        private static readonly MethodInfo woundsPrefix;
+        private static readonly MethodInfo burstShotCountFor;
+        private static readonly MethodInfo modeForDistance;
+        private static readonly List<string> missing = new List<string>();
+        private static bool penetrationPatched;
+        private static int patchedCount;
+
+        private static readonly PropertyInfo settingsProperty;
+        private static readonly FieldInfo fAdvancedArmor, fArmorScale, fPenetrationScale, fBulletWounds, fArrowWounds, fFireModes;
+
+        static VanillaCombatOverhaulCompat()
+        {
+            Type modType = AccessTools.TypeByName("VanillaCombatOverhaul.VCOMod");
+            present = modType != null;
+            if (!present) return;
+
+            settingsProperty = AccessTools.Property(modType, "Settings");
+            Type settingsType = AccessTools.TypeByName("VanillaCombatOverhaul.VCOSettings");
+            fAdvancedArmor = AccessTools.Field(settingsType, "enableAdvancedArmor");
+            fArmorScale = AccessTools.Field(settingsType, "armorScale");
+            fPenetrationScale = AccessTools.Field(settingsType, "penetrationScale");
+            fBulletWounds = AccessTools.Field(settingsType, "enableBulletWorker");
+            fArrowWounds = AccessTools.Field(settingsType, "enableArrowWorker");
+            fFireModes = AccessTools.Field(settingsType, "enableFireModes");
+            if (settingsProperty == null || fAdvancedArmor == null || fArmorScale == null || fPenetrationScale == null)
+                missing.Add("VCO's armor settings");
+
+            try
+            {
+                // The same methods VCO scales, so the two patches cancel out exactly
+                MethodInfo targetMethods = AccessTools.Method(AccessTools.TypeByName("VanillaCombatOverhaul.Patch_ArmorPenetration"), "TargetMethods");
+                if (targetMethods?.Invoke(null, null) is IEnumerable<MethodBase> methods)
+                    penetrationMethods.AddRange(methods.Where(m => m != null));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[CombatTweaks] Could not read Vanilla Combat Overhaul's armor penetration methods: {ex}");
+            }
+
+            rawPenetration = AccessTools.Method(AccessTools.TypeByName("VanillaCombatOverhaul.SuppressionUtility"), "RawPenetration",
+                new[] { typeof(float) });
+            woundsPrefix = AccessTools.Method(AccessTools.TypeByName("VanillaCombatOverhaul.Patch_DamageWorker_AddInjury_ApplySpecialEffectsToPart"), "Prefix",
+                new[] { typeof(DamageWorker_AddInjury), typeof(Pawn), typeof(float), typeof(DamageInfo), typeof(DamageWorker.DamageResult) });
+            Type fireModeUtility = AccessTools.TypeByName("VanillaCombatOverhaul.FireModeUtility");
+            burstShotCountFor = AccessTools.Method(fireModeUtility, "BurstShotCountFor", new[] { typeof(Verb), typeof(int) });
+            modeForDistance = AccessTools.Method(fireModeUtility, "ModeForDistance", new[] { typeof(float) });
+        }
+
+        public static bool Active => present && CombatTweaksMod.Settings != null && CombatTweaksMod.Settings.vanillaCombatOverhaulCompatibility;
+
+        private static object VcoSettings
+        {
+            get
+            {
+                try { return settingsProperty?.GetValue(null, null); }
+                catch { return null; }
+            }
+        }
+
+        private static T Read<T>(FieldInfo field, T fallback)
+        {
+            object settings = VcoSettings;
+            if (settings == null || field == null) return fallback;
+            try { return (T)field.GetValue(settings); }
+            catch { return fallback; }
+        }
+
+        private static bool VcoAdvancedArmor => Read(fAdvancedArmor, false);
+        private static float VcoArmorScale => Read(fArmorScale, 1f);
+        private static float VcoPenetrationScale => Read(fPenetrationScale, 1f);
+
+        // Same conditions VCO checks before scaling penetration
+        public static bool TryGetPenetrationScaleToUndo(out float scale)
+        {
+            scale = 1f;
+            if (!Active || !penetrationPatched || CombatTweaksMod.Settings.vcoUseAdvancedArmor || !VcoAdvancedArmor)
+                return false;
+            scale = VcoPenetrationScale;
+            return scale > 0f && !Mathf.Approximately(scale, 1f);
+        }
+
+        // Same conditions VCO checks before scaling armor and penetration in vanilla's ApplyArmor
+        public static bool TryGetArmorScale(out float scale)
+        {
+            scale = 1f;
+            if (!VcoAdvancedArmor)
+                return false;
+            scale = VcoArmorScale;
+            return scale > 0f && !Mathf.Approximately(scale, 1f);
+        }
+
+        public static string DescribePenetration()
+        {
+            if (!VcoAdvancedArmor)
+                return "VCO's Advanced Armor is off, nothing to adjust";
+            if (!Active)
+                return $"compatibility off, this mod's armor uses VCO's x{VcoPenetrationScale} penetration without VCO's armor scaling";
+            if (CombatTweaksMod.Settings.vcoUseAdvancedArmor)
+                return $"using VCO's Advanced Armor: penetration x{VcoPenetrationScale} at the source, armor and penetration x{VcoArmorScale} at the armor check";
+            if (TryGetPenetrationScaleToUndo(out float scale))
+                return $"VCO's x{scale} armor penetration scaling removed at the source";
+            return penetrationPatched
+                ? $"VCO's penetration scale is x{VcoPenetrationScale}, nothing to remove"
+                : "VCO's armor penetration scaling could not be removed, see the startup log";
+        }
+
+        public static string Describe()
+        {
+            CombatTweaksModSettings s = CombatTweaksMod.Settings;
+            return $"compatibility {OnOff(s.vanillaCombatOverhaulCompatibility)} | " +
+                   $"VCO: Advanced Armor {OnOff(VcoAdvancedArmor)} (armor x{VcoArmorScale}, penetration x{VcoPenetrationScale}), " +
+                   $"bullet wounds {OnOff(Read(fBulletWounds, false))}, arrow wounds {OnOff(Read(fArrowWounds, false))}, fire modes {OnOff(Read(fFireModes, false))} | " +
+                   $"Combat Tweaks options: VCO Advanced Armor {OnOff(s.vcoUseAdvancedArmor)}, VCO wounds {OnOff(s.vcoUseProjectileWounds)}, " +
+                   $"VCO missed shot spread {OnOff(s.vcoUseMissSpread)} (Projectile Spread {s.bulletSpread * 100:F0}%), " +
+                   $"VCO fire mode bursts {OnOff(s.vcoUseFireModeBursts)} (Burst Size x{s.burstSizeMultiplier}), " +
+                   $"scale fire mode distances {OnOff(s.vcoScaleFireModeDistances)} (Weapon Range x{s.weaponRange}) | " +
+                   $"armor penetration: {DescribePenetration()} | patched {patchedCount} of {penetrationMethods.Count + 4} VCO compat targets";
+        }
+
+        private static string OnOff(bool value) => value ? "on" : "off";
+
+        public static void ApplyPatches()
+        {
+            var harmony = new Harmony("kasterfly.combatTweaks");
+            Type patches = typeof(VanillaCombatOverhaulCompat_Patches);
+
+            if (penetrationMethods.Count == 0)
+                missing.Add("VCO's armor penetration methods");
+            penetrationPatched = penetrationMethods.Count > 0;
+            foreach (MethodBase method in penetrationMethods)
+            {
+                // All or nothing, a partly removed scaling would be worse than none
+                if (!TryPatch(harmony, method, $"{method.DeclaringType?.Name}.{method.Name}",
+                        postfix: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.PenetrationPostfix))))
+                    penetrationPatched = false;
+            }
+
+            TryPatch(harmony, rawPenetration, "SuppressionUtility.RawPenetration",
+                prefix: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.RawPenetrationPrefix)));
+            TryPatch(harmony, woundsPrefix, "VCO's bullet/arrow wounds prefix",
+                prefix: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.WoundsPrefix)),
+                finalizer: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.WoundsFinalizer)));
+            TryPatch(harmony, burstShotCountFor, "FireModeUtility.BurstShotCountFor",
+                prefix: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.BurstShotCountPrefix)));
+            TryPatch(harmony, modeForDistance, "FireModeUtility.ModeForDistance",
+                prefix: new HarmonyMethod(patches, nameof(VanillaCombatOverhaulCompat_Patches.ModeForDistancePrefix)));
+        }
+
+        private static bool TryPatch(Harmony harmony, MethodBase original, string name,
+            HarmonyMethod prefix = null, HarmonyMethod postfix = null, HarmonyMethod finalizer = null)
+        {
+            if (original == null)
+            {
+                missing.Add(name);
+                return false;
+            }
+            try
+            {
+                harmony.Patch(original, prefix: prefix, postfix: postfix, finalizer: finalizer);
+                patchedCount++;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                missing.Add(name);
+                Log.Warning($"[CombatTweaks] Vanilla Combat Overhaul compat failed to patch {name}: {ex}");
+                return false;
+            }
+        }
+
+        public static void LogStatus()
+        {
+            Log.Message("[CombatTweaks] Vanilla Combat Overhaul detected, compatibility is " +
+                        (CombatTweaksMod.Settings.vanillaCombatOverhaulCompatibility ? "on" : "off (Combat Tweaks settings > Compatibility)"));
+            if (missing.Count > 0)
+                Log.Warning($"[CombatTweaks] Vanilla Combat Overhaul compat could not find or patch: {string.Join(", ", missing)}. " +
+                            "Those parts of the compatibility are off, VCO probably changed.");
+            if (CombatTweaksMod.Settings.debugLogging)
+                Log.Message("[CombatTweaks] Vanilla Combat Overhaul compat status: " + Describe());
+        }
+
+        public static void OnSettingsChanged()
+        {
+            VerbBurstMultiplierPatch.ApplyBurstBuffFromSettings();
+            if (present && CombatTweaksMod.Settings.debugLogging)
+                Log.Message("[CombatTweaks] Vanilla Combat Overhaul compat settings changed: " + Describe());
+        }
+    }
+
+    [StaticConstructorOnStartup]
+    public static class VanillaCombatOverhaulCompatStartup
+    {
+        static VanillaCombatOverhaulCompatStartup()
+        {
+            if (!VanillaCombatOverhaulCompat.present) return;
+            VanillaCombatOverhaulCompat.ApplyPatches();
+            VanillaCombatOverhaulCompat.LogStatus();
+        }
+    }
+
+    // Applied by VanillaCombatOverhaulCompat.ApplyPatches, only while Vanilla Combat Overhaul is loaded
+    public static class VanillaCombatOverhaulCompat_Patches
+    {
+        // On the same methods as VCO's penetration postfix, so the two cancel out
+        public static void PenetrationPostfix(ref float __result)
+        {
+            if (VanillaCombatOverhaulCompat.TryGetPenetrationScaleToUndo(out float scale))
+                __result /= scale;
+        }
+
+        // VCO's suppression divides by its penetration scale to get the unscaled value, which PenetrationPostfix already did
+        public static bool RawPenetrationPrefix(float shown, ref float __result)
+        {
+            if (!VanillaCombatOverhaulCompat.TryGetPenetrationScaleToUndo(out _))
+                return true;
+            __result = shown;
+            return false;
+        }
+
+        // On VCO's prefix for DamageWorker_AddInjury.ApplySpecialEffectsToPart (bullet/arrow wounds), which skips hits with
+        // result.diminished. Returning false with __result = true makes VCO's prefix let vanilla run instead.
+        public static bool WoundsPrefix(Pawn pawn, DamageInfo dinfo, DamageWorker.DamageResult result, ref bool __result, out int __state)
+        {
+            __state = -1;
+            CombatTweaksModSettings settings = CombatTweaksMod.Settings;
+            if (!VanillaCombatOverhaulCompat.Active || result == null)
+                return true;
+            bool log = settings.debugLogging && dinfo.Def != null && dinfo.Def.isRanged;
+
+            if (!settings.vcoUseProjectileWounds)
+            {
+                if (log)
+                    Log.Message($"[CombatTweaks] Vanilla Combat Overhaul compat: VCO's bullet/arrow wounds skipped for {dinfo.Def.defName} on {pawn}, vanilla wounds used");
+                __result = true;
+                return false;
+            }
+
+            if (CombatTweaksArmorUtility.TryTakeArmorResult(pawn, dinfo.HitPart, out bool reducedByArmor))
+            {
+                if (log)
+                    Log.Message($"[CombatTweaks] Vanilla Combat Overhaul compat: {dinfo.Def.defName} hit on {pawn} counts as {(reducedByArmor ? "reduced" : "not reduced")} by armor for VCO's bullet/arrow wounds" +
+                                (result.diminished != reducedByArmor ? $" (vanilla's check said {(result.diminished ? "reduced" : "not reduced")}, from damage boosts)" : ""));
+                if (result.diminished != reducedByArmor)
+                {
+                    __state = result.diminished ? 1 : 0;
+                    result.diminished = reducedByArmor;
+                }
+            }
+            return true;
+        }
+
+        public static void WoundsFinalizer(DamageWorker.DamageResult result, int __state)
+        {
+            if (__state >= 0)
+                result.diminished = __state == 1;
+        }
+
+        // "Use VCO's fire mode burst sizes" off: Burst Size owns burst size, VCO's fire modes keep their other effects
+        public static bool BurstShotCountPrefix(int baseBurst, ref int __result)
+        {
+            if (!VanillaCombatOverhaulCompat.Active || CombatTweaksMod.Settings.vcoUseFireModeBursts)
+                return true;
+            if (CombatTweaksMod.Settings.debugLogging)
+                Log.Message($"[CombatTweaks] Vanilla Combat Overhaul compat: fire mode burst size skipped, burst stays {baseBurst} (Burst Size)");
+            __result = baseBurst;
+            return false;
+        }
+
+        public static void ModeForDistancePrefix(ref float distance)
+        {
+            if (!VanillaCombatOverhaulCompat.Active || !CombatTweaksMod.Settings.vcoScaleFireModeDistances)
+                return;
+            float range = CombatTweaksMod.Settings.weaponRange;
+            if (range > 0.01f)
+                distance /= range;
+        }
+    }
+
     [StaticConstructorOnStartup]
     public static class VerbBurstMultiplierPatch
     {
@@ -2277,6 +2679,10 @@ namespace Kasterfly.CombatTweaks.HarmonyPatches
         public static void ApplyBurstBuffFromSettings()
         {
             float m = Mathf.Clamp(CombatTweaksMod.Settings.burstSizeMultiplier, 0.01f, 8f);
+            // Vanilla Combat Overhaul's fire modes own burst size instead (see VanillaCombatOverhaulCompat_BurstShotCount_Patch)
+            bool vcoOwnsBursts = VanillaCombatOverhaulCompat.Active && CombatTweaksMod.Settings.vcoUseFireModeBursts;
+            if (vcoOwnsBursts)
+                m = 1f;
 
             if (!_baselinesInitialized)
             {
@@ -2313,7 +2719,8 @@ namespace Kasterfly.CombatTweaks.HarmonyPatches
             }
 
             if (CombatTweaksMod.Settings.debugLogging)
-                Log.Message($"[CombatTweaks] Burst sizes set to baseline × {m:0.###} (was × {_lastMult:0.###}).");
+                Log.Message($"[CombatTweaks] Burst sizes set to baseline × {m:0.###} (was × {_lastMult:0.###})." +
+                    (vcoOwnsBursts ? " Burst Size is ignored, Vanilla Combat Overhaul's fire modes set burst size." : ""));
 
             _lastMult = m;
         }
@@ -2490,10 +2897,29 @@ namespace Kasterfly.CombatTweaks.HarmonyPatches
             {
                 return;
             }
-            ShotReport report = ShotReport.HitReportFor(launcher, verb, intendedTarget);
-            if (Rand.Chance(report.AimOnTargetChance))
+            // With Vanilla Combat Overhaul the shot was already rolled with VCO's accuracy changes, so either VCO places
+            // the miss, or only shots that already went wide (not hits, not cover hits) are re-aimed, without a second roll
+            bool vcoCompat = VanillaCombatOverhaulCompat.Active;
+            float aimChance = -1f;
+            if (vcoCompat)
             {
-                return;
+                if (CombatTweaksMod.Settings.vcoUseMissSpread)
+                {
+                    if (CombatTweaksMod.Settings.debugLogging)
+                        Log.Message("[CombatTweaks] Vanilla Combat Overhaul compat: Projectile Spread skipped, VCO places missed shots");
+                    return;
+                }
+                if (usedTarget.HasThing || usedTarget.Cell == intendedTarget.Cell)
+                    return;
+            }
+            else
+            {
+                ShotReport report = ShotReport.HitReportFor(launcher, verb, intendedTarget);
+                aimChance = report.AimOnTargetChance;
+                if (Rand.Chance(aimChance))
+                {
+                    return;
+                }
             }
 
             float maxAngle = Mathf.Min(baseSpread * 90f, 180f);
@@ -2532,7 +2958,8 @@ namespace Kasterfly.CombatTweaks.HarmonyPatches
             {
                 Log.Message(
                     $"[CombatTweaks] Forced MISS via spread logic\n" +
-                    $"- AimChance: {report.AimOnTargetChance:P1} | Deviation: {deviationAngle:F2}°" +
+                    (vcoCompat ? "- Shot already missed (rolled by Vanilla Combat Overhaul)" : $"- AimChance: {aimChance:P1}") +
+                    $" | Deviation: {deviationAngle:F2}°" +
                     $"- | Final Target Cell: {usedTarget.Cell} | Max Angle: {maxAngle/2:F2}° | missPoint: {missPoint.ToString()}"
                  );
             }
