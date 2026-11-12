@@ -32,7 +32,7 @@ namespace Kasterfly.CombatTweaks
 
             InitSettings();
             YayoCombat3Compat.DoYayoUnpatch();
-            Log.Message($"[CombatTweaks] CombatTweaks (v1.4.0) for RimWorld {VersionSpecific.GameVersion}");
+            Log.Message($"[CombatTweaks] CombatTweaks (v1.4.1) for RimWorld {VersionSpecific.GameVersion}");
         }
 
         public override string SettingsCategory() => "Combat Tweaks";
@@ -2072,7 +2072,9 @@ namespace Kasterfly.CombatTweaks.Hediff
         {
             base.PostRemoved();
 
-            if (pawn != null && !pawn.Dead && pawn.Map != null)
+            // No crash for pawns that are already downed: it does nothing useful for them and only
+            // gets in the way while they are being rescued and treated.
+            if (pawn != null && !pawn.Dead && !pawn.Downed && pawn.Map != null)
             {
                 HediffDef crashDef = CombatTweaksArmorUtility.AdrenalineCrashDef;
                 if (crashDef != null && !pawn.health.hediffSet.HasHediff(crashDef))
